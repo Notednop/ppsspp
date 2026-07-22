@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cmath>
 
+#define DRFLAC_API static
 #define DR_FLAC_IMPLEMENTATION
 #define DR_FLAC_NO_STDIO
 #include "ext/libchdr/include/dr_libs/dr_flac.h"
@@ -29,11 +30,15 @@
 #include "Common/UI/Context.h"
 #include "Common/UI/View.h"
 #include "Common/UI/ViewGroup.h"
+#include "Common/UI/ScrollView.h"
+#include "Common/Render/DrawBuffer.h"
+#include "Common/Data/Color/RGBAUtil.h"
 #include "Common/Data/Text/I18n.h"
 #include "Common/System/System.h"
 #include "Common/System/Display.h"
 #include "Common/TimeUtil.h"
 #include "Core/Config.h"
+#include "Core/Util/PathUtil.h"
 #include "UI/MusicPlayerScreen.h"
 
 // Simple linear resampler to 44100Hz Stereo
@@ -240,7 +245,7 @@ void MusicPlayerScreen::PlayThreadFunc() {
 		currentOffset += framesToRead;
 
 		// Feed in tight loop with small delay
-		sleep_ms(16);
+		sleep_ms(16, "music_player_feed");
 	}
 }
 
@@ -266,8 +271,10 @@ void MusicPlayerScreen::CreateViews() {
 		for (int i = 0; i < (int)tracks_.size(); i++) {
 			std::string label = tracks_[i].title + " [" + tracks_[i].format + "]";
 			Choice *trackChoice = trackList->Add(new Choice(label, ImageID("I_PLAY")));
-			trackChoice->OnClick.Handle(this, &MusicPlayerScreen::OnTrackClick);
-			trackChoice->SetId(i);
+			trackChoice->OnClick.Add([this, i](UI::EventParams &) {
+				StartPlayback(i);
+				RecreateViews();
+			});
 		}
 	}
 
@@ -285,7 +292,7 @@ void MusicPlayerScreen::CreateViews() {
 	rightColumn->Add(new Spacer(new LinearLayoutParams(FILL_PARENT, 200)));
 
 	// Beautiful interactive playback controls
-	LinearLayout *controlsRow = rightColumn->Add(new LinearLayout(ORIENT_HORIZONTAL, new LinearLayoutParams(WRAP_CONTENT, WRAP_CONTENT, Gravity::G_HCENTER)));
+	LinearLayout *controlsRow = rightColumn->Add(new LinearLayout(ORIENT_HORIZONTAL, new LinearLayoutParams(WRAP_CONTENT, WRAP_CONTENT, 0.0f, Gravity::G_HCENTER)));
 	controlsRow->SetSpacing(16.0f);
 
 	Choice *prevBtn = controlsRow->Add(new Choice(ImageID("I_ARROW_LEFT")));
@@ -302,7 +309,7 @@ void MusicPlayerScreen::CreateViews() {
 
 	rightColumn->Add(new Spacer(new LinearLayoutParams(1.0f)));
 
-	Choice *backBtn = rightColumn->Add(new Choice(di->T("Back"), ImageID("I_NAVIGATE_BACK"), new LinearLayoutParams(180, WRAP_CONTENT, Gravity::G_HCENTER)));
+	Choice *backBtn = rightColumn->Add(new Choice(di->T("Back"), ImageID("I_NAVIGATE_BACK"), new LinearLayoutParams(180, WRAP_CONTENT, 0.0f, Gravity::G_HCENTER)));
 	backBtn->OnClick.Handle<UIScreen>(this, &UIScreen::OnBack);
 
 	root_ = rootLayout;
@@ -349,9 +356,7 @@ void MusicPlayerScreen::DrawBackground(UIContext &dc) {
 
 // Event Handlers
 void MusicPlayerScreen::OnTrackClick(UI::EventParams &e) {
-	int idx = e.v->Id();
-	StartPlayback(idx);
-	RecreateViews();
+	// Replaced by safe lambdas in CreateViews
 }
 
 void MusicPlayerScreen::OnPlayPauseClick(UI::EventParams &e) {
