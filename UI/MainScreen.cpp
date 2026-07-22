@@ -42,6 +42,7 @@
 #include "UI/EmuScreen.h"
 #include "UI/MainScreen.h"
 #include "UI/GameScreen.h"
+#include "UI/MusicPlayerScreen.h"
 #include "UI/GameInfoCache.h"
 #include "UI/GameSettingsScreen.h"
 #include "UI/IAPScreen.h"
@@ -297,6 +298,10 @@ void MainScreen::CreateMainButtons(UI::ViewGroup *parent, bool portrait) {
 	// PlayStation 5 Inspired blue accent highlighting (#0078FF / 0xFF0078FF)
 	Choice *settingsBtn = parent->Add(portrait ? new Choice(ImageID("I_GEAR"), portrait ? new LinearLayoutParams() : nullptr) : new Choice(mm->T("Game Settings", "Settings")));
 	settingsBtn->OnClick.Handle(this, &MainScreen::OnGameSettings);
+
+	// PlayStation 5 Aesthetic Music Player
+	Choice *musicBtn = parent->Add(portrait ? new Choice(ImageID("I_PLAY"), portrait ? new LinearLayoutParams() : nullptr) : new Choice(mm->T("Music Player", "Music Player")));
+	musicBtn->OnClick.Handle(this, &MainScreen::OnMusicPlayer);
 
 	parent->Add(portrait ? new Choice(ImageID("I_INFO"), portrait ? new LinearLayoutParams() : nullptr) : new Choice(mm->T("About PPSSPP")))->OnClick.Handle(this, &MainScreen::OnCredits);
 
@@ -732,6 +737,10 @@ void MainScreen::OnGameSelectedInstant(UI::EventParams &e) {
 void MainScreen::OnGameSettings(UI::EventParams &e) {
 	// Not passing a game ID, changing the global settings.
 	screenManager()->push(new GameSettingsScreen(Path()));
+}
+
+void MainScreen::OnMusicPlayer(UI::EventParams &e) {
+	screenManager()->push(new MusicPlayerScreen());
 }
 
 void MainScreen::OnCredits(UI::EventParams &e) {
