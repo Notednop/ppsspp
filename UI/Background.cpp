@@ -117,7 +117,7 @@ public:
 		// We can draw a beautiful deep gradient representing the dark glass theme and the dynamic lighting.
 		uint32_t topColor = colorAlpha(0x00021A, alpha); // Very dark navy
 		uint32_t bottomColor = colorAlpha(0x00113A, alpha); // Darker blue
-		dc.Draw()->RectVGradient(bounds.x, bounds.y, bounds.x2(), bounds.y2(), topColor, bottomColor);
+		dc.Draw()->Rect(bounds.x, bounds.y, bounds.w, bounds.h, topColor);
 
 		// Dynamic waves colored with PlayStation Blue Accent (#0078FF) and soft light layers.
 		const int steps = std::max(20, std::min((int)g_display.dp_xres, 500));
@@ -158,7 +158,7 @@ public:
 				p.x = rng.F() * bounds.w;
 			}
 			uint32_t pColor = colorAlpha(0xFFFFFF, p.opacity * alpha);
-			dc.Draw()->FillCircle(p.x, p.y, p.size, 8, pColor);
+			dc.Draw()->Rect(p.x - p.size, p.y - p.size, p.size * 2, p.size * 2, pColor);
 		}
 
 		dc.Flush();
