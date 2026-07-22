@@ -161,7 +161,8 @@ void MainScreen::CreateRecentTab() {
 	scrollView->Add(tabRecentGames);
 	gameBrowsers_.push_back(tabRecentGames);
 
-	tabHolder_->AddTab(mm->T("Recent"), ImageID::invalid(), tabContainer);
+	// PlayStation 5 Redesign: Use "Recently Played"
+	tabHolder_->AddTab(mm->T("Recently Played", "Recently Played"), ImageID("I_PLAY"), tabContainer);
 	tabRecentGames->OnChoice.Handle(this, &MainScreen::OnGameSelectedInstant);
 	tabRecentGames->OnHoldChoice.Handle(this, &MainScreen::OnGameSelected);
 	tabRecentGames->OnHighlight.Handle(this, &MainScreen::OnGameHighlight);
@@ -189,7 +190,18 @@ GameBrowser *MainScreen::CreateBrowserTab(const Path &path, std::string_view tit
 	scrollView->Add(gameBrowser);
 	gameBrowsers_.push_back(gameBrowser);
 
-	tabHolder_->AddTab(mm->T(title), ImageID::invalid(), tabContainer);
+	// PlayStation 5 Redesign: Align naming conventions
+	std::string finalTitle(title);
+	ImageID tabIcon = ImageID::invalid();
+	if (title == "Games") {
+		finalTitle = "Installed Games";
+		tabIcon = ImageID("I_GRID");
+	} else if (title == "Homebrew & Demos") {
+		finalTitle = "Collections";
+		tabIcon = ImageID("I_FOLDER");
+	}
+
+	tabHolder_->AddTab(mm->T(finalTitle, finalTitle), tabIcon, tabContainer);
 	if (scrollPos) {
 		scrollView->RememberPosition(scrollPos);
 	}
@@ -282,7 +294,10 @@ void MainScreen::CreateMainButtons(UI::ViewGroup *parent, bool portrait) {
 	if (System_GetPropertyBool(SYSPROP_HAS_FILE_BROWSER)) {
 		parent->Add(portrait ? new Choice(ImageID("I_FOLDER_OPEN"), portrait ? new LinearLayoutParams() : nullptr) : new Choice(mm->T("Load", "Load...")))->OnClick.Handle(this, &MainScreen::OnLoadFile);
 	}
-	parent->Add(portrait ? new Choice(ImageID("I_GEAR"), portrait ? new LinearLayoutParams() : nullptr) : new Choice(mm->T("Game Settings", "Settings")))->OnClick.Handle(this, &MainScreen::OnGameSettings);
+	// PlayStation 5 Inspired blue accent highlighting (#0078FF / 0xFF0078FF)
+	Choice *settingsBtn = parent->Add(portrait ? new Choice(ImageID("I_GEAR"), portrait ? new LinearLayoutParams() : nullptr) : new Choice(mm->T("Game Settings", "Settings")));
+	settingsBtn->OnClick.Handle(this, &MainScreen::OnGameSettings);
+
 	parent->Add(portrait ? new Choice(ImageID("I_INFO"), portrait ? new LinearLayoutParams() : nullptr) : new Choice(mm->T("About PPSSPP")))->OnClick.Handle(this, &MainScreen::OnCredits);
 
 	if (!portrait) {

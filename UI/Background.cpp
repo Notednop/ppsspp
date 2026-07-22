@@ -79,32 +79,86 @@ private:
 
 class WaveAnimation : public Animation {
 public:
-	void Draw(UIContext &dc, double t, float alpha, Lin::Vec3 focus) override {
-		const uint32_t color = colorAlpha(0xFFFFFFFF, alpha * 0.2f);
-		const float speed = 1.0;
+	struct Particle {
+		float x, y;
+		float speedX, speedY;
+		float size;
+		float opacity;
+	};
 
+	std::vector<Particle> particles;
+	GMRng rng;
+	bool inited = false;
+
+	void InitParticles(float w, float h) {
+		rng.Init(12345);
+		particles.resize(40);
+		for (auto &p : particles) {
+			p.x = rng.F() * w;
+			p.y = rng.F() * h;
+			p.speedX = (rng.F() - 0.5f) * 15.0f;
+			p.speedY = -rng.F() * 25.0f - 5.0f;
+			p.size = rng.F() * 4.0f + 2.0f;
+			p.opacity = rng.F() * 0.4f + 0.1f;
+		}
+		inited = true;
+	}
+
+	void Draw(UIContext &dc, double t, float alpha, Lin::Vec3 focus) override {
 		Bounds bounds = dc.GetBounds();
+		if (!inited) {
+			InitParticles(bounds.w, bounds.h);
+		}
+
 		dc.Flush();
 		dc.BeginNoTex();
 
-		// 500 is enough for any resolution really. 24 * 500 = 12000 which fits handily in our UI vertex buffer (max 65536 per flush).
+		// PlayStation 5 Inspired Dynamic Gradient (Deep navy transitioning to PlayStation Blue accent #0078FF)
+		// We can draw a beautiful deep gradient representing the dark glass theme and the dynamic lighting.
+		uint32_t topColor = colorAlpha(0x00021A, alpha); // Very dark navy
+		uint32_t bottomColor = colorAlpha(0x00113A, alpha); // Darker blue
+		dc.Draw()->RectVGradient(bounds.x, bounds.y, bounds.x2(), bounds.y2(), topColor, bottomColor);
+
+		// Dynamic waves colored with PlayStation Blue Accent (#0078FF) and soft light layers.
 		const int steps = std::max(20, std::min((int)g_display.dp_xres, 500));
 		float step = (float)g_display.dp_xres / (float)steps;
-		t *= speed;
+
+		// Layer 1: PlayStation Blue Accent #0078FF
+		uint32_t waveColor1 = colorAlpha(0x0078FF, alpha * 0.15f);
+		// Layer 2: Deeper soft blue
+		uint32_t waveColor2 = colorAlpha(0x00A2FF, alpha * 0.08f);
 
 		for (int n = 0; n < steps; n++) {
 			float x = (float)n * step;
 			float nextX = (float)(n + 1) * step;
-			float i = x * 1280 / bounds.w;
+			float i = x * 1280.0f / bounds.w;
 
-			float wave0 = sin(i * 0.005 + t * 0.8) * 0.05 + sin(i * 0.002 + t * 0.25) * 0.02 + sin(i * 0.001 + t * 0.3) * 0.03 + 0.625;
-			float wave1 = sin(i * 0.0044 + t * 0.4) * 0.07 + sin(i * 0.003 + t * 0.1) * 0.02 + sin(i * 0.001 + t * 0.3) * 0.01 + 0.625;
-			dc.Draw()->RectVGradient(x, wave0 * bounds.h, nextX, bounds.h, color, 0x00000000);
-			dc.Draw()->RectVGradient(x, wave1 * bounds.h, nextX, bounds.h, color, 0x00000000);
+			// Smooth, slow fluid wave equation
+			float wave0 = sin(i * 0.003 + t * 0.4) * 0.08f + sin(i * 0.001 + t * 0.15) * 0.04f + 0.55f;
+			float wave1 = sin(i * 0.0025 + t * 0.25) * 0.06f + sin(i * 0.0008 + t * 0.1) * 0.03f + 0.65f;
 
-			// Add some "antialiasing"
-			dc.Draw()->RectVGradient(x, wave0 * bounds.h - 3.0f * g_display.pixel_in_dps_y, nextX, wave0 * bounds.h, 0x00000000, color);
-			dc.Draw()->RectVGradient(x, wave1 * bounds.h - 3.0f * g_display.pixel_in_dps_y, nextX, wave1 * bounds.h, 0x00000000, color);
+			dc.Draw()->RectVGradient(x, wave0 * bounds.h, nextX, bounds.h, waveColor1, 0x00000000);
+			dc.Draw()->RectVGradient(x, wave1 * bounds.h, nextX, bounds.h, waveColor2, 0x00000000);
+
+			// Anti-aliased/glowing wave edge
+			dc.Draw()->RectVGradient(x, wave0 * bounds.h - 4.0f * g_display.pixel_in_dps_y, nextX, wave0 * bounds.h, 0x00000000, waveColor1);
+			dc.Draw()->RectVGradient(x, wave1 * bounds.h - 4.0f * g_display.pixel_in_dps_y, nextX, wave1 * bounds.h, 0x00000000, waveColor2);
+		}
+
+		// GPU accelerated light particles moving gently upwards (Parallax-like floating stars/dust)
+		float dt = 0.016f; // rough approximation for tick
+		for (auto &p : particles) {
+			p.x += p.speedX * dt;
+			p.y += p.speedY * dt;
+			if (p.y < -10.0f) {
+				p.y = bounds.h + 10.0f;
+				p.x = rng.F() * bounds.w;
+			}
+			if (p.x < -10.0f || p.x > bounds.w + 10.0f) {
+				p.x = rng.F() * bounds.w;
+			}
+			uint32_t pColor = colorAlpha(0xFFFFFF, p.opacity * alpha);
+			dc.Draw()->FillCircle(p.x, p.y, p.size, 8, pColor);
 		}
 
 		dc.Flush();
