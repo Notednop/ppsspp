@@ -99,35 +99,77 @@ MusicPlayerScreen::~MusicPlayerScreen() {
 
 void MusicPlayerScreen::ScanMusicFiles() {
 	tracks_.clear();
-	Path musicDir = GetSysDirectory(DIRECTORY_MEMSTICK_ROOT) / "PSP" / "MUSIC";
-	if (!File::Exists(musicDir)) {
-		File::CreateFullPath(musicDir);
+
+	std::vector<Path> roots;
+	roots.push_back(GetSysDirectory(DIRECTORY_MEMSTICK_ROOT));
+
+	// On Android, scan common external storage directories
+#ifdef ANDROID
+	roots.push_back(Path("/sdcard/Music"));
+	roots.push_back(Path("/sdcard/Download"));
+	roots.push_back(Path("/sdcard/PSP/MUSIC"));
+#else
+	// On desktop, scan the user home directory if we can find it
+	const char* home = getenv("USERPROFILE"); // Windows
+	if (!home) home = getenv("HOME"); // Linux/macOS
+	if (home) {
+		Path homePath(home);
+		roots.push_back(homePath / "Music");
+		roots.push_back(homePath / "Downloads");
+	}
+#endif
+
+	// Also scan the last browsed directory
+	if (!g_Config.currentDirectory.empty()) {
+		roots.push_back(Path(g_Config.currentDirectory));
 	}
 
+	std::set<std::string> uniquePaths;
+	int maxTracks = 500; // prevent UI overflow/excessive memory usage
+
+	for (const auto& root : roots) {
+		if (tracks_.size() >= (size_t)maxTracks) break;
+		ScanDirectoryRecursively(root, 0, uniquePaths, maxTracks);
+	}
+}
+
+void MusicPlayerScreen::ScanDirectoryRecursively(const Path &dir, int depth, std::set<std::string> &uniquePaths, int maxTracks) {
+	if (depth > 4 || tracks_.size() >= (size_t)maxTracks) return;
+
 	std::vector<File::FileInfo> files;
-	File::GetFilesInDir(musicDir, &files);
+	if (!File::GetFilesInDir(dir, &files)) return;
 
 	for (const auto &file : files) {
-		if (file.isDirectory) continue;
+		if (tracks_.size() >= (size_t)maxTracks) break;
 
-		std::string ext = file.fullName.GetFileExtension();
-		std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+		if (file.isDirectory) {
+			// Skip special hidden/system/parent directories to avoid infinite loops and lag
+			if (file.name == "." || file.name == ".." || file.name.empty() || file.name.front() == '.') continue;
+			ScanDirectoryRecursively(file.fullName, depth + 1, uniquePaths, maxTracks);
+		} else {
+			std::string ext = file.fullName.GetFileExtension();
+			std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
-		if (ext == ".flac" || ext == ".mp3" || ext == ".wav") {
-			MusicTrack track;
-			track.path = file.fullName;
-			track.title = file.name;
-			if (ext == ".flac") {
-				track.format = "FLAC";
-				track.isFlac = true;
-			} else if (ext == ".mp3") {
-				track.format = "MP3";
-				track.isMp3 = true;
-			} else {
-				track.format = "WAV";
-				track.isWav = true;
+			if (ext == ".flac" || ext == ".mp3" || ext == ".wav") {
+				std::string pathStr = file.fullName.ToString();
+				if (uniquePaths.count(pathStr)) continue;
+				uniquePaths.insert(pathStr);
+
+				MusicTrack track;
+				track.path = file.fullName;
+				track.title = file.name;
+				if (ext == ".flac") {
+					track.format = "FLAC";
+					track.isFlac = true;
+				} else if (ext == ".mp3") {
+					track.format = "MP3";
+					track.isMp3 = true;
+				} else {
+					track.format = "WAV";
+					track.isWav = true;
+				}
+				tracks_.push_back(track);
 			}
-			tracks_.push_back(track);
 		}
 	}
 }
@@ -139,7 +181,7 @@ void MusicPlayerScreen::update() {
 	double now = time_now_d();
 	double dt = now - lastVisualizerUpdate_;
 	if (dt > 0.0) {
-		visualizerAmplitude_ = std::max(0.0f, visualizerAmplitude_ - (float)(dt * 4.0f));
+		visualizerAmplitude_ = std::max(0.0f, visualizerAmplitude_.load() - (float)(dt * 4.0f));
 		lastVisualizerUpdate_ = now;
 	}
 }
@@ -237,7 +279,7 @@ void MusicPlayerScreen::PlayThreadFunc() {
 		}
 
 		// Update real-time visualization amplitude safely
-		visualizerAmplitude_ = std::max(visualizerAmplitude_, ampSum / (float)framesToRead);
+		visualizerAmplitude_ = std::max(visualizerAmplitude_.load(), ampSum / (float)framesToRead);
 
 		// Push to standard audio output
 		System_AudioPushSamples(mixBuffer.data(), (int)framesToRead, 1.0f);

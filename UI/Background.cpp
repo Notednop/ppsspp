@@ -145,6 +145,30 @@ public:
 			dc.Draw()->RectVGradient(x, wave1 * bounds.h - 4.0f * g_display.pixel_in_dps_y, nextX, wave1 * bounds.h, 0x00000000, waveColor2);
 		}
 
+		// Modern smooth XMB Intersecting Ribbon Waves (Floating across the screen)
+		for (int n = 0; n < steps - 1; n++) {
+			float x = (float)n * step;
+			float nextX = (float)(n + 1) * step;
+			float i = x * 1280.0f / bounds.w;
+			float nextI = nextX * 1280.0f / bounds.w;
+
+			// Ribbon wave 1 (PlayStation Blue #0078FF Accent)
+			float y0_r1 = (sinf(i * 0.003f + (float)t * 0.35f) * cosf(i * 0.0015f - (float)t * 0.1f) * 0.14f + 0.5f) * bounds.h;
+			float y1_r1 = (sinf(nextI * 0.003f + (float)t * 0.35f) * cosf(nextI * 0.0015f - (float)t * 0.1f) * 0.14f + 0.5f) * bounds.h;
+
+			// Ribbon wave 2 (Deeper Soft Blue #00A2FF Accent)
+			float y0_r2 = (cosf(i * 0.0028f - (float)t * 0.25f) * sinf(i * 0.0018f + (float)t * 0.2f) * 0.12f + 0.48f) * bounds.h;
+			float y1_r2 = (cosf(nextI * 0.0028f - (float)t * 0.25f) * sinf(nextI * 0.0018f + (float)t * 0.2f) * 0.12f + 0.48f) * bounds.h;
+
+			// Ribbon wave 3 (Translucent glowing white highlight)
+			float y0_r3 = (sinf(i * 0.004f + (float)t * 0.5f) * 0.06f + 0.52f) * bounds.h;
+			float y1_r3 = (sinf(nextI * 0.004f + (float)t * 0.5f) * 0.06f + 0.52f) * bounds.h;
+
+			dc.Draw()->Line(ImageID("I_SOLIDWHITE"), x, y0_r1, nextX, y1_r1, 4.0f, colorAlpha(0x0078FF, alpha * 0.4f));
+			dc.Draw()->Line(ImageID("I_SOLIDWHITE"), x, y0_r2, nextX, y1_r2, 3.5f, colorAlpha(0x00A2FF, alpha * 0.3f));
+			dc.Draw()->Line(ImageID("I_SOLIDWHITE"), x, y0_r3, nextX, y1_r3, 1.5f, colorAlpha(0xFFFFFF, alpha * 0.2f));
+		}
+
 		// GPU accelerated light particles moving gently upwards (Parallax-like floating stars/dust)
 		float dt = 0.016f; // rough approximation for tick
 		for (auto &p : particles) {

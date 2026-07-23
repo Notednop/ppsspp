@@ -22,6 +22,7 @@
 #include <mutex>
 #include <thread>
 #include <atomic>
+#include <set>
 
 #include "Common/UI/UIScreen.h"
 #include "Common/UI/ViewGroup.h"
@@ -53,6 +54,7 @@ protected:
 
 private:
 	void ScanMusicFiles();
+	void ScanDirectoryRecursively(const Path &dir, int depth, std::set<std::string> &uniquePaths, int maxTracks);
 	void StartPlayback(int trackIdx);
 	void PlayThreadFunc();
 	void StopPlayback();
@@ -73,6 +75,6 @@ private:
 	std::mutex playMutex_;
 
 	// For animated wave visualizer
-	float visualizerAmplitude_ = 0.0f;
+	std::atomic<float> visualizerAmplitude_{0.0f};
 	double lastVisualizerUpdate_ = 0.0;
 };

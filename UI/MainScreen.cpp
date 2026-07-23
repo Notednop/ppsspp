@@ -293,20 +293,23 @@ void MainScreen::CreateMainButtons(UI::ViewGroup *parent, bool portrait) {
 		parent->Add(new Spacer(1.0f, new LinearLayoutParams(1.0f)));
 	}
 	if (System_GetPropertyBool(SYSPROP_HAS_FILE_BROWSER)) {
-		parent->Add(portrait ? new Choice(ImageID("I_FOLDER_OPEN"), portrait ? new LinearLayoutParams() : nullptr) : new Choice(mm->T("Load", "Load...")))->OnClick.Handle(this, &MainScreen::OnLoadFile);
+		Choice *loadBtn = parent->Add(portrait ? new Choice(ImageID("I_FOLDER_OPEN"), portrait ? new LinearLayoutParams(Margins(6, 6)) : nullptr) : new Choice(mm->T("Load", "Load..."), new LinearLayoutParams(FILL_PARENT, 64, Margins(8, 4))));
+		loadBtn->OnClick.Handle(this, &MainScreen::OnLoadFile);
 	}
 	// PlayStation 5 Inspired blue accent highlighting (#0078FF / 0xFF0078FF)
-	Choice *settingsBtn = parent->Add(portrait ? new Choice(ImageID("I_GEAR"), portrait ? new LinearLayoutParams() : nullptr) : new Choice(mm->T("Game Settings", "Settings")));
+	Choice *settingsBtn = parent->Add(portrait ? new Choice(ImageID("I_GEAR"), portrait ? new LinearLayoutParams(Margins(6, 6)) : nullptr) : new Choice(mm->T("Game Settings", "Settings"), new LinearLayoutParams(FILL_PARENT, 64, Margins(8, 4))));
 	settingsBtn->OnClick.Handle(this, &MainScreen::OnGameSettings);
 
 	// PlayStation 5 Aesthetic Music Player
-	Choice *musicBtn = parent->Add(portrait ? new Choice(ImageID("I_PLAY"), portrait ? new LinearLayoutParams() : nullptr) : new Choice(mm->T("Music Player", "Music Player")));
+	Choice *musicBtn = parent->Add(portrait ? new Choice(ImageID("I_PLAY"), portrait ? new LinearLayoutParams(Margins(6, 6)) : nullptr) : new Choice(mm->T("Music Player", "Music Player"), new LinearLayoutParams(FILL_PARENT, 64, Margins(8, 4))));
 	musicBtn->OnClick.Handle(this, &MainScreen::OnMusicPlayer);
 
-	parent->Add(portrait ? new Choice(ImageID("I_INFO"), portrait ? new LinearLayoutParams() : nullptr) : new Choice(mm->T("About PPSSPP")))->OnClick.Handle(this, &MainScreen::OnCredits);
+	Choice *creditsBtn = parent->Add(portrait ? new Choice(ImageID("I_INFO"), portrait ? new LinearLayoutParams(Margins(6, 6)) : nullptr) : new Choice(mm->T("About PPSSPP"), new LinearLayoutParams(FILL_PARENT, 64, Margins(8, 4))));
+	creditsBtn->OnClick.Handle(this, &MainScreen::OnCredits);
 
 	if (!portrait) {
-		parent->Add(new Choice(mm->T("www.ppsspp.org")))->OnClick.Handle(this, &MainScreen::OnPPSSPPOrg);
+		Choice *orgBtn = parent->Add(new Choice(mm->T("www.ppsspp.org"), new LinearLayoutParams(FILL_PARENT, 64, Margins(8, 4))));
+		orgBtn->OnClick.Handle(this, &MainScreen::OnPPSSPPOrg);
 	}
 
 	if (!System_GetPropertyBool(SYSPROP_APP_GOLD) && (System_GetPropertyInt(SYSPROP_DEVICE_TYPE) != DEVICE_TYPE_VR)) {
