@@ -88,6 +88,9 @@
     <ClCompile Include="..\..\UI\MainScreen.cpp">
       <Filter>Screens</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\UI\MusicPlayerScreen.cpp">
+      <Filter>Screens</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\UI\MemStickScreen.cpp">
       <Filter>Screens</Filter>
     </ClCompile>
@@ -229,6 +232,9 @@
       <Filter>Screens</Filter>
     </ClInclude>
     <ClInclude Include="..\..\UI\MainScreen.h">
+      <Filter>Screens</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\UI\MusicPlayerScreen.h">
       <Filter>Screens</Filter>
     </ClInclude>
     <ClInclude Include="..\..\UI\MemStickScreen.h">

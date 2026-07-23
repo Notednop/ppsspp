@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
@@ -50,15 +50,15 @@ jobs:
       #- name: Setup SDK # gradlew will install SDK automatically, thus this step not needed
       #  uses: android-actions/setup-android@v3
           
-      #- name: Setup NDK # gradle will install NDK (side by side) automatically, thus explictly seting up NDK here will cause not enough storage issue when building debug variant
+      #- name: Setup NDK # gradle will install NDK (side by side) automatically, thus explicitly setting up NDK here will cause not enough storage issue when building debug variant
       #  uses: nttld/setup-ndk@v1
       #  with:
       #    ndk-version: r21e
 
-      - name: Test androidGitVersion
+      - name: Test Gradle Connection
         run: |
           echo "count=${{steps.valid-tags.outputs.count}}"
-          gradle --quiet androidGitVersion
+          ./gradlew --quiet help
       
       - name: Assemble APK
         run: ./gradlew assemble${{ github.event.inputs.buildVariant }} --stacktrace

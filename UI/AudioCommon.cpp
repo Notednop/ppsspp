@@ -22,6 +22,9 @@
 #include "UI/AudioCommon.h"
 #include "UI/BackgroundAudio.h"
 #include "Core/HW/Display.h"
+#include <mutex>
+
+static std::mutex g_audioPushMutex;
 
 StereoResampler g_resampler;
 GranularMixer g_granular;
@@ -57,10 +60,12 @@ void System_AudioGetDebugStats(char *buf, size_t bufSize) {
 }
 
 void System_AudioClear() {
+	std::lock_guard<std::mutex> lock(g_audioPushMutex);
 	g_resampler.Clear();
 }
 
 void System_AudioPushSamples(const int32_t *audio, int numSamples, float volume) {
+	std::lock_guard<std::mutex> lock(g_audioPushMutex);
 	if (audio) {
 		if (g_Config.iAudioPlaybackMode == (int)AudioSyncMode::GRANULAR) {
 			g_granular.PushSamples(audio, numSamples, volume);

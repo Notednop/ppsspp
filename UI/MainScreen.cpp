@@ -42,6 +42,7 @@
 #include "UI/EmuScreen.h"
 #include "UI/MainScreen.h"
 #include "UI/GameScreen.h"
+#include "UI/MusicPlayerScreen.h"
 #include "UI/GameInfoCache.h"
 #include "UI/GameSettingsScreen.h"
 #include "UI/IAPScreen.h"
@@ -161,7 +162,8 @@ void MainScreen::CreateRecentTab() {
 	scrollView->Add(tabRecentGames);
 	gameBrowsers_.push_back(tabRecentGames);
 
-	tabHolder_->AddTab(mm->T("Recent"), ImageID::invalid(), tabContainer);
+	// PlayStation 5 Redesign: Use "Recently Played"
+	tabHolder_->AddTab(mm->T("Recently Played", "Recently Played"), ImageID("I_PLAY"), tabContainer);
 	tabRecentGames->OnChoice.Handle(this, &MainScreen::OnGameSelectedInstant);
 	tabRecentGames->OnHoldChoice.Handle(this, &MainScreen::OnGameSelected);
 	tabRecentGames->OnHighlight.Handle(this, &MainScreen::OnGameHighlight);
@@ -189,7 +191,18 @@ GameBrowser *MainScreen::CreateBrowserTab(const Path &path, std::string_view tit
 	scrollView->Add(gameBrowser);
 	gameBrowsers_.push_back(gameBrowser);
 
-	tabHolder_->AddTab(mm->T(title), ImageID::invalid(), tabContainer);
+	// PlayStation 5 Redesign: Align naming conventions
+	std::string finalTitle(title);
+	ImageID tabIcon = ImageID::invalid();
+	if (title == "Games") {
+		finalTitle = "Installed Games";
+		tabIcon = ImageID("I_GRID");
+	} else if (title == "Homebrew & Demos") {
+		finalTitle = "Collections";
+		tabIcon = ImageID("I_FOLDER");
+	}
+
+	tabHolder_->AddTab(mm->T(finalTitle, finalTitle), tabIcon, tabContainer);
 	if (scrollPos) {
 		scrollView->RememberPosition(scrollPos);
 	}
@@ -280,13 +293,23 @@ void MainScreen::CreateMainButtons(UI::ViewGroup *parent, bool portrait) {
 		parent->Add(new Spacer(1.0f, new LinearLayoutParams(1.0f)));
 	}
 	if (System_GetPropertyBool(SYSPROP_HAS_FILE_BROWSER)) {
-		parent->Add(portrait ? new Choice(ImageID("I_FOLDER_OPEN"), portrait ? new LinearLayoutParams() : nullptr) : new Choice(mm->T("Load", "Load...")))->OnClick.Handle(this, &MainScreen::OnLoadFile);
+		Choice *loadBtn = parent->Add(portrait ? new Choice(ImageID("I_FOLDER_OPEN"), portrait ? new LinearLayoutParams(Margins(6, 6)) : nullptr) : new Choice(mm->T("Load", "Load..."), new LinearLayoutParams(FILL_PARENT, 64, Margins(8, 4))));
+		loadBtn->OnClick.Handle(this, &MainScreen::OnLoadFile);
 	}
-	parent->Add(portrait ? new Choice(ImageID("I_GEAR"), portrait ? new LinearLayoutParams() : nullptr) : new Choice(mm->T("Game Settings", "Settings")))->OnClick.Handle(this, &MainScreen::OnGameSettings);
-	parent->Add(portrait ? new Choice(ImageID("I_INFO"), portrait ? new LinearLayoutParams() : nullptr) : new Choice(mm->T("About PPSSPP")))->OnClick.Handle(this, &MainScreen::OnCredits);
+	// PlayStation 5 Inspired blue accent highlighting (#0078FF / 0xFF0078FF)
+	Choice *settingsBtn = parent->Add(portrait ? new Choice(ImageID("I_GEAR"), portrait ? new LinearLayoutParams(Margins(6, 6)) : nullptr) : new Choice(mm->T("Game Settings", "Settings"), new LinearLayoutParams(FILL_PARENT, 64, Margins(8, 4))));
+	settingsBtn->OnClick.Handle(this, &MainScreen::OnGameSettings);
+
+	// PlayStation 5 Aesthetic Music Player
+	Choice *musicBtn = parent->Add(portrait ? new Choice(ImageID("I_PLAY"), portrait ? new LinearLayoutParams(Margins(6, 6)) : nullptr) : new Choice(mm->T("Music Player", "Music Player"), new LinearLayoutParams(FILL_PARENT, 64, Margins(8, 4))));
+	musicBtn->OnClick.Handle(this, &MainScreen::OnMusicPlayer);
+
+	Choice *creditsBtn = parent->Add(portrait ? new Choice(ImageID("I_INFO"), portrait ? new LinearLayoutParams(Margins(6, 6)) : nullptr) : new Choice(mm->T("About PPSSPP"), new LinearLayoutParams(FILL_PARENT, 64, Margins(8, 4))));
+	creditsBtn->OnClick.Handle(this, &MainScreen::OnCredits);
 
 	if (!portrait) {
-		parent->Add(new Choice(mm->T("www.ppsspp.org")))->OnClick.Handle(this, &MainScreen::OnPPSSPPOrg);
+		Choice *orgBtn = parent->Add(new Choice(mm->T("www.ppsspp.org"), new LinearLayoutParams(FILL_PARENT, 64, Margins(8, 4))));
+		orgBtn->OnClick.Handle(this, &MainScreen::OnPPSSPPOrg);
 	}
 
 	if (!System_GetPropertyBool(SYSPROP_APP_GOLD) && (System_GetPropertyInt(SYSPROP_DEVICE_TYPE) != DEVICE_TYPE_VR)) {
@@ -368,6 +391,37 @@ void MainScreen::CreateViews() {
 			remoteBrowser->SetHomePath(remotePath);
 		}
 
+		// XMB Music Player Category Tab
+		LinearLayout *musicTab = new LinearLayout(ORIENT_VERTICAL, new LinearLayoutParams(FILL_PARENT, FILL_PARENT, Margins(32, 16)));
+		musicTab->SetSpacing(16.0f);
+		musicTab->Add(new TextView("MUSIC PLAYER", ALIGN_LEFT, false, new LinearLayoutParams(Margins(0, 32, 0, 8))));
+		musicTab->Add(new TextView("Enjoy high-fidelity, native FLAC, MP3, and WAV music playback with dynamic PS5 visualizer animations.", ALIGN_LEFT, true));
+		Choice *openMusicBtn = musicTab->Add(new Choice("Launch Music Player", ImageID("I_PLAY"), new LinearLayoutParams(280, 64, Margins(0, 32))));
+		openMusicBtn->OnClick.Handle(this, &MainScreen::OnMusicPlayer);
+		tabHolder_->AddTab("Music Player", ImageID("I_PLAY"), musicTab);
+
+		// XMB Settings Category Tab
+		LinearLayout *settingsTab = new LinearLayout(ORIENT_VERTICAL, new LinearLayoutParams(FILL_PARENT, FILL_PARENT, Margins(32, 16)));
+		settingsTab->SetSpacing(16.0f);
+		settingsTab->Add(new TextView("GAME SETTINGS", ALIGN_LEFT, false, new LinearLayoutParams(Margins(0, 32, 0, 8))));
+		settingsTab->Add(new TextView("Configure graphics rendering, controls mapping, sound, and system parameters.", ALIGN_LEFT, true));
+		Choice *openSettingsBtn = settingsTab->Add(new Choice("Configure Settings", ImageID("I_GEAR"), new LinearLayoutParams(280, 64, Margins(0, 32))));
+		openSettingsBtn->OnClick.Handle(this, &MainScreen::OnGameSettings);
+		tabHolder_->AddTab("Settings", ImageID("I_GEAR"), settingsTab);
+
+		// XMB About Category Tab
+		LinearLayout *aboutTab = new LinearLayout(ORIENT_VERTICAL, new LinearLayoutParams(FILL_PARENT, FILL_PARENT, Margins(32, 16)));
+		aboutTab->SetSpacing(16.0f);
+		aboutTab->Add(new TextView("ABOUT PPSSPP", ALIGN_LEFT, false, new LinearLayoutParams(Margins(0, 32, 0, 8))));
+		aboutTab->Add(new TextView("The world's best, most advanced Playstation Portable emulator.", ALIGN_LEFT, true));
+		LinearLayout *linksRow = aboutTab->Add(new LinearLayout(ORIENT_HORIZONTAL, new LinearLayoutParams(WRAP_CONTENT, WRAP_CONTENT, Margins(0, 24))));
+		linksRow->SetSpacing(16.0f);
+		Choice *webBtn = linksRow->Add(new Choice("Website", new LinearLayoutParams(180, 48)));
+		webBtn->OnClick.Handle(this, &MainScreen::OnPPSSPPOrg);
+		Choice *creditsBtn = linksRow->Add(new Choice("Credits", new LinearLayoutParams(180, 48)));
+		creditsBtn->OnClick.Handle(this, &MainScreen::OnCredits);
+		tabHolder_->AddTab("About", ImageID("I_INFO"), aboutTab);
+
 		if (g_recentFiles.HasAny()) {
 			tabHolder_->SetCurrentTab(std::clamp(g_Config.iDefaultTab, 0, g_Config.bRemoteTab ? 3 : 2), true);
 		} else if (g_Config.iMaxRecent > 0) {
@@ -421,53 +475,20 @@ void MainScreen::CreateViews() {
 	}
 
 	if (vertical) {
-		LinearLayout *header = new LinearLayout(ORIENT_HORIZONTAL, new LinearLayoutParams(FILL_PARENT, WRAP_CONTENT, Margins(8, 8, 8, 16)));
+		LinearLayout *header = new LinearLayout(ORIENT_HORIZONTAL, new LinearLayoutParams(FILL_PARENT, WRAP_CONTENT, Margins(16, 16, 16, 8)));
 		header->SetSpacing(5.0f);
 		header->Add(new LogoView(true, new LinearLayoutParams(1.0f)));
-
-		LinearLayout *buttonGroup = new LinearLayout(ORIENT_HORIZONTAL, new LinearLayoutParams(WRAP_CONTENT, WRAP_CONTENT, 1.0f, UI::Gravity::G_VCENTER));
-
-		CreateMainButtons(buttonGroup, vertical);
-		header->Add(buttonGroup);
 
 		LinearLayout *rootLayout = new LinearLayout(ORIENT_VERTICAL);
 		rootLayout->SetSpacing(0.0f);
 
-		leftColumn->ReplaceLayoutParams(new LinearLayoutParams(1.0f));
+		leftColumn->ReplaceLayoutParams(new LinearLayoutParams(FILL_PARENT, FILL_PARENT, 1.0f));
 		rootLayout->Add(header);
 		rootLayout->Add(leftColumn);
 		root_ = rootLayout;
-
-		// no space for a fullscreen button!
 	} else {
-		const Margins actionMenuMargins(0, 10, 10, 0);
-		ViewGroup *rightColumn = new ScrollView(ORIENT_VERTICAL, new LinearLayoutParams(320, FILL_PARENT, actionMenuMargins));
-		LinearLayout *rightColumnItems = new LinearLayout(ORIENT_VERTICAL, new LinearLayoutParams(FILL_PARENT, WRAP_CONTENT));
-		rightColumnItems->SetSpacing(0.0f);
-		ViewGroup *logo = new LogoView(false, new LinearLayoutParams(FILL_PARENT, 80.0f));
-
-		if (System_GetPropertyInt(SYSPROP_DEVICE_TYPE) == DEVICE_TYPE_DESKTOP) {
-			auto gr = GetI18NCategory(I18NCat::GRAPHICS);
-			Button *fullscreenButton = logo->Add(new Button("", ImageID(), new AnchorLayoutParams(48, 48, NONE, 0, 0, NONE, Centering::None)));
-			fullscreenButton->SetIgnoreText(true);
-			fullscreenButton->OnClick.Add([](UI::EventParams &e) {
-				g_Config.bFullScreen = !g_Config.bFullScreen;
-				System_ApplyFullscreenState();
-			});
-			fullscreenButton->SetImageIDFunc([]() {
-				return g_Config.bFullScreen ? ImageID("I_RESTORE") : ImageID("I_FULLSCREEN");
-			});
-		}
-		rightColumnItems->Add(logo);
-
-		LinearLayout *rightColumnChoices = rightColumnItems;
-		CreateMainButtons(rightColumnChoices, vertical);
-
-		rightColumn->Add(rightColumnItems);
-
-		root_ = new LinearLayout(ORIENT_HORIZONTAL);
-		root_->Add(leftColumn);
-		root_->Add(rightColumn);
+		leftColumn->ReplaceLayoutParams(new LinearLayoutParams(FILL_PARENT, FILL_PARENT));
+		root_ = leftColumn;
 	}
 
 	if (focusButton) {
@@ -717,6 +738,10 @@ void MainScreen::OnGameSelectedInstant(UI::EventParams &e) {
 void MainScreen::OnGameSettings(UI::EventParams &e) {
 	// Not passing a game ID, changing the global settings.
 	screenManager()->push(new GameSettingsScreen(Path()));
+}
+
+void MainScreen::OnMusicPlayer(UI::EventParams &e) {
+	screenManager()->push(new MusicPlayerScreen());
 }
 
 void MainScreen::OnCredits(UI::EventParams &e) {
