@@ -391,6 +391,37 @@ void MainScreen::CreateViews() {
 			remoteBrowser->SetHomePath(remotePath);
 		}
 
+		// XMB Music Player Category Tab
+		LinearLayout *musicTab = new LinearLayout(ORIENT_VERTICAL, new LinearLayoutParams(FILL_PARENT, FILL_PARENT, Margins(32, 16)));
+		musicTab->SetSpacing(16.0f);
+		musicTab->Add(new TextView("MUSIC PLAYER", ALIGN_LEFT, false, new LinearLayoutParams(Margins(0, 32, 0, 8))));
+		musicTab->Add(new TextView("Enjoy high-fidelity, native FLAC, MP3, and WAV music playback with dynamic PS5 visualizer animations.", ALIGN_LEFT, true));
+		Choice *openMusicBtn = musicTab->Add(new Choice("Launch Music Player", ImageID("I_PLAY"), new LinearLayoutParams(280, 64, Margins(0, 32))));
+		openMusicBtn->OnClick.Handle(this, &MainScreen::OnMusicPlayer);
+		tabHolder_->AddTab("Music Player", ImageID("I_PLAY"), musicTab);
+
+		// XMB Settings Category Tab
+		LinearLayout *settingsTab = new LinearLayout(ORIENT_VERTICAL, new LinearLayoutParams(FILL_PARENT, FILL_PARENT, Margins(32, 16)));
+		settingsTab->SetSpacing(16.0f);
+		settingsTab->Add(new TextView("GAME SETTINGS", ALIGN_LEFT, false, new LinearLayoutParams(Margins(0, 32, 0, 8))));
+		settingsTab->Add(new TextView("Configure graphics rendering, controls mapping, sound, and system parameters.", ALIGN_LEFT, true));
+		Choice *openSettingsBtn = settingsTab->Add(new Choice("Configure Settings", ImageID("I_GEAR"), new LinearLayoutParams(280, 64, Margins(0, 32))));
+		openSettingsBtn->OnClick.Handle(this, &MainScreen::OnGameSettings);
+		tabHolder_->AddTab("Settings", ImageID("I_GEAR"), settingsTab);
+
+		// XMB About Category Tab
+		LinearLayout *aboutTab = new LinearLayout(ORIENT_VERTICAL, new LinearLayoutParams(FILL_PARENT, FILL_PARENT, Margins(32, 16)));
+		aboutTab->SetSpacing(16.0f);
+		aboutTab->Add(new TextView("ABOUT PPSSPP", ALIGN_LEFT, false, new LinearLayoutParams(Margins(0, 32, 0, 8))));
+		aboutTab->Add(new TextView("The world's best, most advanced Playstation Portable emulator.", ALIGN_LEFT, true));
+		LinearLayout *linksRow = aboutTab->Add(new LinearLayout(ORIENT_HORIZONTAL, new LinearLayoutParams(WRAP_CONTENT, WRAP_CONTENT, Margins(0, 24))));
+		linksRow->SetSpacing(16.0f);
+		Choice *webBtn = linksRow->Add(new Choice("Website", new LinearLayoutParams(180, 48)));
+		webBtn->OnClick.Handle(this, &MainScreen::OnPPSSPPOrg);
+		Choice *creditsBtn = linksRow->Add(new Choice("Credits", new LinearLayoutParams(180, 48)));
+		creditsBtn->OnClick.Handle(this, &MainScreen::OnCredits);
+		tabHolder_->AddTab("About", ImageID("I_INFO"), aboutTab);
+
 		if (g_recentFiles.HasAny()) {
 			tabHolder_->SetCurrentTab(std::clamp(g_Config.iDefaultTab, 0, g_Config.bRemoteTab ? 3 : 2), true);
 		} else if (g_Config.iMaxRecent > 0) {
@@ -444,53 +475,20 @@ void MainScreen::CreateViews() {
 	}
 
 	if (vertical) {
-		LinearLayout *header = new LinearLayout(ORIENT_HORIZONTAL, new LinearLayoutParams(FILL_PARENT, WRAP_CONTENT, Margins(8, 8, 8, 16)));
+		LinearLayout *header = new LinearLayout(ORIENT_HORIZONTAL, new LinearLayoutParams(FILL_PARENT, WRAP_CONTENT, Margins(16, 16, 16, 8)));
 		header->SetSpacing(5.0f);
 		header->Add(new LogoView(true, new LinearLayoutParams(1.0f)));
-
-		LinearLayout *buttonGroup = new LinearLayout(ORIENT_HORIZONTAL, new LinearLayoutParams(WRAP_CONTENT, WRAP_CONTENT, 1.0f, UI::Gravity::G_VCENTER));
-
-		CreateMainButtons(buttonGroup, vertical);
-		header->Add(buttonGroup);
 
 		LinearLayout *rootLayout = new LinearLayout(ORIENT_VERTICAL);
 		rootLayout->SetSpacing(0.0f);
 
-		leftColumn->ReplaceLayoutParams(new LinearLayoutParams(1.0f));
+		leftColumn->ReplaceLayoutParams(new LinearLayoutParams(FILL_PARENT, FILL_PARENT, 1.0f));
 		rootLayout->Add(header);
 		rootLayout->Add(leftColumn);
 		root_ = rootLayout;
-
-		// no space for a fullscreen button!
 	} else {
-		const Margins actionMenuMargins(0, 10, 10, 0);
-		ViewGroup *rightColumn = new ScrollView(ORIENT_VERTICAL, new LinearLayoutParams(320, FILL_PARENT, actionMenuMargins));
-		LinearLayout *rightColumnItems = new LinearLayout(ORIENT_VERTICAL, new LinearLayoutParams(FILL_PARENT, WRAP_CONTENT));
-		rightColumnItems->SetSpacing(0.0f);
-		ViewGroup *logo = new LogoView(false, new LinearLayoutParams(FILL_PARENT, 80.0f));
-
-		if (System_GetPropertyInt(SYSPROP_DEVICE_TYPE) == DEVICE_TYPE_DESKTOP) {
-			auto gr = GetI18NCategory(I18NCat::GRAPHICS);
-			Button *fullscreenButton = logo->Add(new Button("", ImageID(), new AnchorLayoutParams(48, 48, NONE, 0, 0, NONE, Centering::None)));
-			fullscreenButton->SetIgnoreText(true);
-			fullscreenButton->OnClick.Add([](UI::EventParams &e) {
-				g_Config.bFullScreen = !g_Config.bFullScreen;
-				System_ApplyFullscreenState();
-			});
-			fullscreenButton->SetImageIDFunc([]() {
-				return g_Config.bFullScreen ? ImageID("I_RESTORE") : ImageID("I_FULLSCREEN");
-			});
-		}
-		rightColumnItems->Add(logo);
-
-		LinearLayout *rightColumnChoices = rightColumnItems;
-		CreateMainButtons(rightColumnChoices, vertical);
-
-		rightColumn->Add(rightColumnItems);
-
-		root_ = new LinearLayout(ORIENT_HORIZONTAL);
-		root_->Add(leftColumn);
-		root_->Add(rightColumn);
+		leftColumn->ReplaceLayoutParams(new LinearLayoutParams(FILL_PARENT, FILL_PARENT));
+		root_ = leftColumn;
 	}
 
 	if (focusButton) {

@@ -39,6 +39,7 @@
 #include "Common/TimeUtil.h"
 #include "Core/Config.h"
 #include "Core/Util/PathUtil.h"
+#include "UI/BackgroundAudio.h"
 #include "UI/MusicPlayerScreen.h"
 
 // Simple linear resampler to 44100Hz Stereo
@@ -90,6 +91,8 @@ static std::vector<uint8_t> ReadFileBytes(const Path &path) {
 }
 
 MusicPlayerScreen::MusicPlayerScreen() {
+	// Halt background music preview to avoid thread conflicts and sound overlap
+	g_BackgroundAudio.SetGame(Path());
 	ScanMusicFiles();
 }
 
@@ -190,6 +193,8 @@ void MusicPlayerScreen::StartPlayback(int trackIdx) {
 	StopPlayback();
 
 	if (trackIdx < 0 || trackIdx >= (int)tracks_.size()) return;
+
+	g_BackgroundAudio.SetGame(Path());
 
 	currentTrackIdx_ = trackIdx;
 	isPlaying_ = true;
